@@ -1,0 +1,28 @@
+services:
+    db:
+        image: postgres:15
+        container_name: persona_postgres
+        restart: always
+        environment:
+            POSTGRES_SUPER_USER: ${POSTGRES_SUPER_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    bot:
+        build: .
+        container_name: persona_bot
+        restart: always
+        env_file:
+            - .env
+        volumes:
+            - ./config.json:/app/config.json
+            - ./persona.txt:/app/persona.txt
+        depends_on:
+            - db
+
+volumes:
+    pgdata:

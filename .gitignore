@@ -1,0 +1,5 @@
+.env
+venv
+app/__pycache__
+persona.txt
+config.json

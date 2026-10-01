@@ -1,0 +1,9 @@
+{
+    "bot_name": "MyBot",
+    "start_message": "Hi!",
+    "unsupported_message": "I don't know how to process this type of message yet.",
+    "path_to_persona_prompt_txt": "persona.txt",
+    "llm_settings": {
+        "history_limit": 10
+    }
+}
