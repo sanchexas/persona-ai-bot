@@ -36,7 +36,7 @@ class PersonaLore(Base):
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # 1536 - vector size for OpenAI / OpenRouter models
-    embedding: Mapped[List[float]] = mapped_column(Vector(1536), nullable=False)
+    embedding: Mapped[List[float]] = mapped_column(Vector(384), nullable=False)
 
 async def init_db():
     async with engine.begin() as conn:

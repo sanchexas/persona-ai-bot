@@ -3,20 +3,24 @@ from typing import List
 from sqlalchemy import select
 from db import AsyncSessionLocal, PersonaLore
 from dotenv import load_dotenv
-from client import openai_client
+# from client import openai_client
 from db import add_lore_to_db
+from fastembed import TextEmbedding
 
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 async def get_embedding(text: str) -> List[float]:
     """Text to vector"""
-    response = await openai_client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    return response.data[0].embedding
+    # response = await openai_client.embeddings.create(
+    #     model="openai/text-embedding-3-small",
+    #     input=text
+    # )
+    # return response.data[0].embedding
+    embeddings = list(embedding_model.embed([text]))
+    return embeddings[0].tolist()
 
 async def get_relevant_lore(user_query: str, limit: int = 2, threshold: float = 0.55) -> List[str]:
     """

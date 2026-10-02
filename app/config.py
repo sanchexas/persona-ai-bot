@@ -6,9 +6,11 @@ load_dotenv()
 
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
 
+config: dict = {}
+
 def load_config() -> dict:
     if not os.path.exists(CONFIG_PATH):
-        raise FileNotFoundError(f"Файл конфигурации {CONFIG_PATH} не найден!")
+        raise FileNotFoundError(f"File {CONFIG_PATH} not found.")
 
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -20,6 +22,8 @@ def load_config() -> dict:
     else:
         data["persona_prompt"] = ""
 
-    return data
+    config.clear()
+    config.update(data)
+    return config
 
-config = load_config()
+load_config()
