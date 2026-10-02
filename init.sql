@@ -6,3 +6,5 @@ GRANT ALL PRIVILEGES ON DATABASE persona_bot_db TO persona_user;
 
 ALTER SCHEMA public OWNER TO persona_user;
 GRANT ALL ON SCHEMA public TO persona_user;
+
+CREATE EXTENSION IF NOT EXISTS vector;
