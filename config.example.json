@@ -3,6 +3,7 @@
     "start_message": "Hi!",
     "unsupported_message": "I don't know how to process this type of message yet.",
     "path_to_persona_prompt_txt": "persona.txt",
+    "rag_lore_facts-template": "Below are the facts from your life/memory. Use these facts organically in your answer, ONLY if they are relevant to the question. Don't quote them verbatim, answer on your own behalf.:",
     "llm_settings": {
         "history_limit": 10
     }

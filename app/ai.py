@@ -22,12 +22,7 @@ async def generate_response(chat_id: int, user_message: str) -> str:
 
     if relevant_facts:
         facts_list = "\n".join(f"- {fact}" for fact in relevant_facts)
-        lore_block = (
-            "\n\n=== КОНТЕКСТ ИЗ ТВОЕЙ ЖИЗНИ / ПАМЯТИ ===\n"
-            f"{facts_list}\n"
-            "Используй эти факты органично в ответе, ТОЛЬКО если они уместны к вопросу. "
-            "Не цитируй их дословно, а отвечай от своего лица."
-        )
+        lore_block = f'\n{config["rag_lore_facts-template"]}: \n {facts_list}'
         system_prompt += lore_block
 
     messages = [

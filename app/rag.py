@@ -48,7 +48,6 @@ async def get_relevant_lore(user_query: str, limit: int = 2, threshold: float = 
         return []
 
 async def add_lore_fact(content: str, category: str = "general") -> bool:
-    """Векторизует текст и передает данные в db.py для сохранения"""
     try:
         vector = await get_embedding(content)
         return await add_lore_to_db(content=content, category=category, embedding=vector)
