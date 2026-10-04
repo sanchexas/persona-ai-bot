@@ -9,6 +9,7 @@ from ai import generate_response
 from config import config, load_config
 from rag import add_lore_fact
 from filters import IsOwner
+from logger import logger
 
 bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
 dp = Dispatcher()
@@ -60,9 +61,10 @@ async def start_handler(message: types.Message):
     if message.from_user:
         is_owner = await IsOwner()(message)
         if is_owner:
+            logger.debug(f"The user with ID {IsOwner.get_owner_id()} is an admin")
             await setup_admin_menu(message.from_user.id)
             
-    await message.answer(config.get("start_message", "Привет!"))
+    await message.answer(config.get("start_message", "Hi!"))
 
 @dp.message()
 async def message_handler(message: types.Message):
@@ -72,7 +74,7 @@ async def message_handler(message: types.Message):
             await setup_admin_menu(message.from_user.id)
             
     if not message.text:
-        await message.answer(config.get("unsupported_message", "Только текст."))
+        await message.answer(config.get("unsupported_message", "Text only."))
         return
 
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
@@ -81,7 +83,7 @@ async def message_handler(message: types.Message):
 
 async def main():
     await init_db()
-    
+
     default_commands = [BotCommand(command="start", description="Start bot")]
     await bot.set_my_commands(default_commands, scope=BotCommandScopeDefault())
 

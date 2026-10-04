@@ -2,6 +2,7 @@ from typing import Optional
 from aiogram.filters import Filter
 from aiogram.types import Message
 from dotenv import load_dotenv
+from logger import logger
 
 load_dotenv()
 

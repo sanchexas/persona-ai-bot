@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import text
 from pgvector.sqlalchemy import Vector
+from logger import logger
 
 load_dotenv()
 
@@ -51,28 +52,43 @@ class UserFact(Base):
     )
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        logger.debug("Initializing database tables...")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Database initialization failed: {e}", exc_info=True)
+        raise
 
 async def add_message(chat_id: int, role: str, content: str):
-    async with AsyncSessionLocal() as session:
-        msg = Message(chat_id=chat_id, role=role, content=content)
-        session.add(msg)
-        await session.commit()
+    try:
+        async with AsyncSessionLocal() as session:
+            msg = Message(chat_id=chat_id, role=role, content=content)
+            session.add(msg)
+            await session.commit()
+            logger.debug(f"Saved message to DB | chat_id={chat_id}, role={role}, len={len(content)}")
+    except Exception as e:
+        logger.error(f"Failed to save message | chat_id={chat_id}, role={role}: {e}", exc_info=True)
 
 async def get_recent_history(chat_id: int, limit: int = 10) -> List[Dict[str, str]]:
-    async with AsyncSessionLocal() as session:
-        get_messages_by_limit_query = (
-            select(Message)
-            .where(Message.chat_id == chat_id)
-            .order_by(Message.id.desc())
-            .limit(limit)
-        )
-        result = await session.execute(get_messages_by_limit_query)
-        messages = result.scalars().all()
-        messages.reverse()
-        
-        return [{"role": msg.role, "content": msg.content} for msg in messages]
+    try:
+        async with AsyncSessionLocal() as session:
+            get_messages_by_limit_query = (
+                select(Message)
+                .where(Message.chat_id == chat_id)
+                .order_by(Message.id.desc())
+                .limit(limit)
+            )
+            result = await session.execute(get_messages_by_limit_query)
+            messages = result.scalars().all()
+            messages.reverse()
+            
+            logger.debug(f"Fetched {len(messages)} history messages for chat_id={chat_id}")
+            return [{"role": msg.role, "content": msg.content} for msg in messages]
+    except Exception as e:
+        logger.error(f"Failed to fetch history for chat_id={chat_id}: {e}", exc_info=True)
+        return []
 
 async def add_lore_to_db(content: str, category: str, embedding: list[float]) -> bool:
     try:
@@ -84,9 +100,10 @@ async def add_lore_to_db(content: str, category: str, embedding: list[float]) ->
             )
             session.add(lore_entry)
             await session.commit()
+            logger.info(f"Saved new persona lore | category={category}, content='{content[:30]}...'")
             return True
     except Exception as e:
-        print(f"[DB Error] Couldn't save lore entry: {e}")
+        logger.error(f"Failed to save persona lore: {e}", exc_info=True)
         return False
 
 async def add_user_fact(chat_id: int, fact: str, embedding: List[float]) -> bool:
@@ -95,9 +112,10 @@ async def add_user_fact(chat_id: int, fact: str, embedding: List[float]) -> bool
             fact_entry = UserFact(chat_id=chat_id, fact=fact, embedding=embedding)
             session.add(fact_entry)
             await session.commit()
+            logger.debug(f"Saved user fact | chat_id={chat_id}, fact='{fact}'")
             return True
     except Exception as e:
-        print(f"[DB Error] Couldn't save user fact: {e}")
+        logger.error(f"Failed to save user fact for chat_id={chat_id}: {e}", exc_info=True)
         return False
 
 async def get_relevant_user_facts(chat_id: int, query_embedding: List[float], limit: int = 3, threshold: float = 0.55) -> List[str]:
@@ -111,7 +129,9 @@ async def get_relevant_user_facts(chat_id: int, query_embedding: List[float], li
                 .limit(limit)
             )
             result = await session.execute(user_facts_query)
-            return list(result.scalars().all())
+            facts = list(result.scalars().all())
+            logger.debug(f"RAG UserFacts retrieved | chat_id={chat_id}, count={len(facts)}")
+            return facts
     except Exception as e:
         print(f"[DB_Error] Couldn't fetch user facts: {e}")
         return []

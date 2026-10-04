@@ -6,6 +6,7 @@ from db import add_message, get_recent_history, get_relevant_user_facts
 from client import openai_client
 from rag import get_embedding, get_relevant_lore
 from user_memory import process_and_save_user_facts
+from logger import logger
 
 load_dotenv()
 
@@ -27,12 +28,14 @@ async def generate_response(chat_id: int, user_message: str) -> str:
 
     if relevant_facts:
         facts_list = "\n".join(f"- {fact}" for fact in relevant_facts)
-        lore_template = config.get("rag_lore_facts-template")
+        lore_template = config.get("rag_lore_facts_template")
         system_prompt += f"\n{lore_template}\n{facts_list}"
+        logger.debug(f"Added Lore facts to prompt for chat_id={chat_id}: {relevant_facts}")
     if user_facts:
         user_facts_list = "\n".join(f"- {fact}" for fact in user_facts)
         user_template = config.get("user_facts_template")
         system_prompt += f"\n{user_template}\n{user_facts_list}"
+        logger.debug(f"Added User facts to prompt for chat_id={chat_id}: {user_facts}")
 
     history_limit = config.get("llm_settings", {}).get("history_limit", 10)
     history = await get_recent_history(chat_id=chat_id, limit=history_limit)

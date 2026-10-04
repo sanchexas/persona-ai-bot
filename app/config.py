@@ -1,6 +1,7 @@
 import json
 import os
 from dotenv import load_dotenv
+from logger import logger
 
 load_dotenv()
 
@@ -10,6 +11,7 @@ config: dict = {}
 
 def load_config() -> dict:
     if not os.path.exists(CONFIG_PATH):
+        logger.critical(f"Configuration file {CONFIG_PATH} not found!")
         raise FileNotFoundError(f"File {CONFIG_PATH} not found.")
 
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -19,11 +21,13 @@ def load_config() -> dict:
     if persona_path and os.path.exists(persona_path):
         with open(persona_path, "r", encoding="utf-8") as pf:
             data["persona_prompt"] = pf.read().strip()
+            logger.debug(f"Loaded persona prompt from {persona_path}")
     else:
         data["persona_prompt"] = ""
 
     config.clear()
     config.update(data)
+    logger.debug("Configuration successfully loaded/reloaded.")
     return config
 
 load_config()

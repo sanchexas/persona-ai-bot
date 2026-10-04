@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from client import openai_client
 from db import add_user_fact
 from rag import get_embedding
+from logger import logger
 
 load_dotenv()
 LLM_MODEL = os.getenv("LLM_MODEL")
@@ -33,9 +34,12 @@ async def extract_facts_from_message(user_message: str) -> list[str]:
             response_format={"type": "json_object"},
         )
         data = json.loads(response.choices[0].message.content)
-        return data.get("facts", [])
+        facts = data.get("facts", [])
+        if facts:
+            logger.debug(f"Extracted user facts:\n{facts}")
+        return facts
     except Exception as e:
-        print(f"[Memory Error] Failed to extract facts: {e}")
+        logger.error(f"Failed to extract user facts: {e}", exc_info=True)
         return []
 
 async def process_and_save_user_facts(chat_id: int, user_message: str):

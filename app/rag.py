@@ -7,13 +7,15 @@ from dotenv import load_dotenv
 # from client import openai_client
 from db import add_lore_to_db
 from fastembed import TextEmbedding
+from logger import logger
 
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
-async def _generate_embedding_sync(text: str) -> List[float]:
+def _generate_embedding_sync(text: str) -> List[float]:
+    logger.debug(f"Generating embedding for text: '{text[:40]}...'")
     embeddings = list(embedding_model.embed([text]))
     return embeddings[0].tolist()
 
@@ -45,16 +47,18 @@ async def get_relevant_lore(user_query: str, limit: int = 2, threshold: float = 
             )
             result = await session.execute(query)
             relevant_facts = [row[0] for row in result.all()]
-            
+
+            logger.debug(f"RAG PersonaLore retrieved | count={len(relevant_facts)}")
             return relevant_facts
     except Exception as e:
-        print(f"[RAG Error] Couldn't extract lore: {e}")
+        logger.error(f"Failed to extract persona lore for query '{user_query[:30]}...': {e}", exc_info=True)
         return []
 
 async def add_lore_fact(content: str, category: str = "general") -> bool:
     try:
+        logger.debug(f"Adding new persona lore fact: '{content}'")
         vector = await get_embedding(content)
         return await add_lore_to_db(content=content, category=category, embedding=vector)
     except Exception as e:
-        print(f"[RAG Error] Couldn't generate embedding for lore: {e}")
+        logger.error(f"Failed to add persona lore fact: {e}", exc_info=True)
         return False
