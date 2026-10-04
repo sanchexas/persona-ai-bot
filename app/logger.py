@@ -1,6 +1,6 @@
 import logging
 import sys
-from config import config
+import os
 
 def setup_logger():
     logger = logging.getLogger("persona_bot")
@@ -15,8 +15,8 @@ def setup_logger():
     )
 
     console_handler = logging.StreamHandler(sys.stdout)
-    is_debug = config.get("is_debug", False)
-    console_handler.setLevel(logging.DEBUG if is_debug == True else logging.INFO)
+    is_debug = int(os.getenv("IS_DEBUG", 0))
+    console_handler.setLevel(logging.DEBUG if is_debug == 1 else logging.INFO)
     console_handler.setFormatter(formatter)
 
     logger.addHandler(console_handler)

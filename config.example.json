@@ -7,6 +7,5 @@
     "user_facts_template": "\n\n You have known this interlocutor for a long time and remember the following facts about him: \n{user_facts_list}\nRead these facts when communicating with him, but do not list them just like that.",
     "llm_settings": {
         "history_limit": 10
-    },
-    "is_debug": false
+    }
 }
