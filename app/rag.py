@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import List
 from sqlalchemy import select
 from db import AsyncSessionLocal, PersonaLore
@@ -12,6 +13,10 @@ load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
+async def _generate_embedding_sync(text: str) -> List[float]:
+    embeddings = list(embedding_model.embed([text]))
+    return embeddings[0].tolist()
+
 async def get_embedding(text: str) -> List[float]:
     """Text to vector"""
     # response = await openai_client.embeddings.create(
@@ -19,8 +24,7 @@ async def get_embedding(text: str) -> List[float]:
     #     input=text
     # )
     # return response.data[0].embedding
-    embeddings = list(embedding_model.embed([text]))
-    return embeddings[0].tolist()
+    return await asyncio.to_thread(_generate_embedding_sync, text=text)
 
 async def get_relevant_lore(user_query: str, limit: int = 2, threshold: float = 0.55) -> List[str]:
     """
@@ -31,12 +35,12 @@ async def get_relevant_lore(user_query: str, limit: int = 2, threshold: float = 
         query_vector = await get_embedding(user_query)
 
         async with AsyncSessionLocal() as session:
+            # Searching for the closest vectors via cosine_distance
             distance_expr = PersonaLore.embedding.cosine_distance(query_vector)
-            # Ищем ближайшие векторы через cosine_distance
             query = (
                 select(PersonaLore.content)
                 .where(distance_expr < threshold)
-                .order_by(PersonaLore.embedding.cosine_distance(query_vector))
+                .order_by(distance_expr)
                 .limit(limit)
             )
             result = await session.execute(query)

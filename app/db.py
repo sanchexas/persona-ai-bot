@@ -35,8 +35,20 @@ class PersonaLore(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    # 1536 - vector size for OpenAI / OpenRouter models
+    # 384 - Size of FastEmbed vector (BAAI/bge-small-en-v1.5)
     embedding: Mapped[List[float]] = mapped_column(Vector(384), nullable=False)
+
+class UserFact(Base):
+    __tablename__ = "user_facts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    fact: Mapped[str] = mapped_column(Text, nullable=False)
+    # 384 - Size of FastEmbed vector (BAAI/bge-small-en-v1.5)
+    embedding: Mapped[List[float]] = mapped_column(Vector(384), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 async def init_db():
     async with engine.begin() as conn:
@@ -76,3 +88,30 @@ async def add_lore_to_db(content: str, category: str, embedding: list[float]) ->
     except Exception as e:
         print(f"[DB Error] Couldn't save lore entry: {e}")
         return False
+
+async def add_user_fact(chat_id: int, fact: str, embedding: List[float]) -> bool:
+    try:
+        async with AsyncSessionLocal() as session:
+            fact_entry = UserFact(chat_id=chat_id, fact=fact, embedding=embedding)
+            session.add(fact_entry)
+            await session.commit()
+            return True
+    except Exception as e:
+        print(f"[DB Error] Couldn't save user fact: {e}")
+        return False
+
+async def get_relevant_user_facts(chat_id: int, query_embedding: List[float], limit: int = 3, threshold: float = 0.55) -> List[str]:
+    try:
+        async with AsyncSessionLocal() as session:
+            user_facts_query = (
+                select(UserFact.fact)
+                .where(UserFact.chat_id == chat_id)
+                .where(UserFact.embedding.cosine_distance(query_embedding) < threshold)
+                .order_by(UserFact.embedding.cosine_distance(query_embedding))
+                .limit(limit)
+            )
+            result = await session.execute(user_facts_query)
+            return list(result.scalars().all())
+    except Exception as e:
+        print(f"[DB_Error] Couldn't fetch user facts: {e}")
+        return []

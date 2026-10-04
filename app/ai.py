@@ -1,9 +1,11 @@
+import asyncio
 import os
 from dotenv import load_dotenv
 from config import config
-from db import add_message, get_recent_history
+from db import add_message, get_recent_history, get_relevant_user_facts
 from client import openai_client
-from rag import get_relevant_lore
+from rag import get_embedding, get_relevant_lore
+from user_memory import process_and_save_user_facts
 
 load_dotenv()
 
@@ -12,18 +14,28 @@ LLM_MODEL = os.getenv("LLM_MODEL")
 async def generate_response(chat_id: int, user_message: str) -> str:
     # Save user message
     await add_message(chat_id=chat_id, role="user", content=user_message)
-    # Load messages history from database
-    history_limit = config.get("llm_settings", {}).get("history_limit", 10)
-    history = await get_recent_history(chat_id=chat_id, limit=history_limit)
-    # Get relevant facts
-    relevant_facts = await get_relevant_lore(user_message, limit=2, threshold=0.55)
-
-    system_prompt = config["persona_prompt"]
+    # Extract and save personal facts about the interlocutor at the background
+    asyncio.create_task(process_and_save_user_facts(chat_id, user_message))
+    # Generate vector for user message
+    query_embedding = await get_embedding(user_message)
+    # Request persona lore and facts about the user in parallel
+    relevant_facts, user_facts = await asyncio.gather(
+        get_relevant_lore(user_message, limit=2, threshold=0.55),
+        get_relevant_user_facts(chat_id, query_embedding, limit=3, threshold=0.55)
+    )
+    system_prompt = config.get("persona_prompt", "")
 
     if relevant_facts:
         facts_list = "\n".join(f"- {fact}" for fact in relevant_facts)
-        lore_block = f'\n{config["rag_lore_facts-template"]}: \n {facts_list}'
-        system_prompt += lore_block
+        lore_template = config.get("rag_lore_facts-template")
+        system_prompt += f"\n{lore_template}\n{facts_list}"
+    if user_facts:
+        user_facts_list = "\n".join(f"- {fact}" for fact in user_facts)
+        user_template = config.get("user_facts_template")
+        system_prompt += f"\n{user_template}\n{user_facts_list}"
+
+    history_limit = config.get("llm_settings", {}).get("history_limit", 10)
+    history = await get_recent_history(chat_id=chat_id, limit=history_limit)
 
     messages = [
         {
